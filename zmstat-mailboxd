@@ -1,0 +1,102 @@
+#!/bin/bash
+#################################################
+#
+# Get values from zimbra mailboxd.csv stats file
+# using a target key name 
+#
+# Author: rsilveira1987@live.com
+# 
+#################################################
+
+#################################################
+# initialization
+#################################################
+
+# import zimbra variables
+source `dirname $0`/zmshutil || exit 1
+zmsetvars
+
+# stats file
+zmstatfile="/opt/zimbra/zmstat/mailboxd.csv"
+
+# verify stats file
+[ ! -f "$zmstatfile" ] && { echo "Error: File $zmstatfile not found!" 1>&2; exit 1;}
+
+# create array keys
+declare ITEMS=($(head $zmstatfile -n1 | tr ',' ' '))
+
+#################################################
+# helper functions
+#################################################
+function usage() {
+	echo ""
+	echo "$(basename $0) [key] [-h|--help]" 1>&2;
+	echo ""
+}
+
+function display_help() {
+	usage
+	echo "[KEYS]"
+	keys=$(cat <(for a in "${ITEMS[@]}"; do echo "  $a"; done | sort))
+	echo "${keys}"
+	echo ""
+	echo "Bonus: java_heap_size"
+	echo ""
+	echo "More info at https://wiki.zimbra.com/wiki/Zmstats#mailboxd.csv"
+	echo ""
+}
+
+#################################################
+# main script
+#################################################
+
+# at least one item must have been sent
+if [ -z "${1}" ]; then
+	usage
+	exit 1
+else
+	# get first argument
+	key="${1}"
+fi
+
+# command line options
+while test -n "$1"
+do
+	case "$1" in
+		-h | --help)
+			display_help
+			exit 0
+		;;
+	esac
+	shift
+done
+
+# check if arg1 is heap_maxsize (this key isnt in stats file)
+if [ "$key" == "java_heap_size" ];then
+	echo ${mailboxd_java_heap_size} | awk {'print $1 * 1024 * 1024'}
+        #echo $(/opt/zimbra/bin/zmlocalconfig mailboxd_java_heap_size | awk {'print $3 * 1024 * 1024'})
+        exit 0
+fi
+
+# find specified key in array
+for i in "${!ITEMS[@]}"; do
+	if [[ "${ITEMS[$i]}" = "${key}" ]]; then
+		item=$i
+	fi
+done
+
+# validate item (found it?)
+if [ -z "${item}" ]; then
+	usage
+	exit 1
+fi
+
+# adjust item counter to use inside AWK
+((item++))
+
+# get last ocurrency of selected item in zimbra stats file
+output=$(tail $zmstatfile -n1 | awk -F, -v i=$item '{ print $i }')
+
+# print output
+echo $output
+exit 0
