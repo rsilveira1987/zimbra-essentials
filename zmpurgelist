@@ -18,7 +18,7 @@ function display_help(){
 	echo ""
 	usage
 	echo ""
-	echo " List all mailbox purgeable accounts"
+	echo " List all zimbra purgeable accounts in the current mailbox server"
 	echo ""
 }
 	
@@ -37,7 +37,7 @@ do
 shift
 done
 
-# validate argc
+# validate argc number
 [ "$argc" -gt 0 ] && { usage; exit 1; }
 
 ##############################################
