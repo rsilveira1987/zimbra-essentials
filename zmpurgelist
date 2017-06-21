@@ -1,0 +1,92 @@
+#/bin/bash
+##############################################
+#
+# Returns all zimbra purgeable accounts in the
+# current mailbox server
+#
+##############################################
+
+##############################################
+# helper functions
+##############################################
+function usage(){
+	MSG="Usage: $(basename $0) [-h|--help]"
+	echo "$MSG"
+}
+
+function display_help(){
+	echo ""
+	usage
+	echo ""
+	echo " List all mailbox purgeable accounts"
+	echo ""
+}
+	
+# get argc value
+argc=$#
+
+# CLI options
+while test -n "$1"
+do
+	case "$1" in
+		-h | --help)
+ 		  display_help
+		  exit 0
+		;;
+	esac
+shift
+done
+
+# validate argc
+[ "$argc" -gt 0 ] && { usage; exit 1; }
+
+##############################################
+# initialization
+##############################################
+
+# import zimbra variables
+source `dirname $0`/zmshutil || exit 1
+zmsetvars
+
+[ ! -f "/opt/zimbra/bin/mysql" ] && { echo "Error: /opt/zimbra/bin/mysql not found!" 1>&2; exit 1; }
+[ ! -f "/usr/bin/ldapsearch" ] && { echo "Error: /usr/bin/ldapsearch not found!" 1>&2; exit 1; }
+[ ! -f "/usr/bin/grep" ] && { echo "Error: /usr/bin/grep not found!" 1>&2; exit 1; }
+[ ! -f "/usr/bin/cat" ] && { echo "Error: /usr/bin/cat not found!" 1>&2; exit 1; }
+TMP_FILE=/tmp/$$.tmp
+
+##############################################
+# main script
+##############################################
+
+# verify user
+u=`id -un`
+if [ $u != ${zimbra_user} ]; then
+	echo "Error: must be run as ${zimbra_user} user"
+	exit 1
+fi
+
+# compares info from mailbox accounts (inside mariadb) with ldap account zimbraMailHost attribute
+# 1. get all maria db mailbox accounts IDs
+# 2. search the current zimbraMailHost and mail info for each ID using
+# 3. compares it with current hostname info
+for i in $(/opt/zimbra/bin/mysql --batch --skip-column-names -e "select account_id from mailbox" zimbra);
+do
+	# get ldap info for each zimbraId
+	/usr/bin/ldapsearch -x -h ${ldap_host} -D ${zimbra_ldap_userdn} -w ${zimbra_ldap_password} -LLL zimbraId=$i zimbraMailHost zimbraMailDeliveryAddress > $TMP_FILE
+	
+	# get account mail delivery address
+	mail=$(/usr/bin/cat $TMP_FILE | /usr/bin/grep -i zimbraMailDeliveryAddress | awk '{print $2}')
+
+	# check if need purge
+	needToClear=$(/usr/bin/grep ${zimbra_server_hostname} $TMP_FILE -c)
+
+	# inverted logic
+	if [ $needToClear -eq 0 ]; then
+		echo "$mail";
+	fi
+done
+
+# clear tmp file
+rm -f $TMP_FILE
+
+exit 0
