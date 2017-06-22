@@ -4,6 +4,9 @@
 # Returns all zimbra purgeable accounts in the
 # current mailbox server
 #
+# Author: rsilveira1987@live.com
+# https://github.com/rsilveira1987
+#
 ##############################################
 
 ##############################################
@@ -61,18 +64,25 @@ TMP_FILE=/tmp/$$.tmp
 # verify user
 u=`id -un`
 if [ $u != ${zimbra_user} ]; then
-	echo "Error: must be run as ${zimbra_user} user"
+	echo "Error: must be run as ${zimbra_user} user" 1>&2
 	exit 1
 fi
 
-# compares info from mailbox accounts (inside mariadb) with ldap account zimbraMailHost attribute
-# 1. get all maria db mailbox accounts IDs
-# 2. search the current zimbraMailHost and mail info for each ID using
+# compares info from mailbox accounts (inside mariadb) with ldap zimbraMailHost attribute
+# 1. get all maria db accounts ID
+# 2. search the current zimbraMailHost and zimbraMailDeliveryAddress attributes for each ID
 # 3. compares it with current hostname info
 for i in $(/opt/zimbra/bin/mysql --batch --skip-column-names -e "select account_id from mailbox" zimbra);
 do
 	# get ldap info for each zimbraId
 	/usr/bin/ldapsearch -x -h ${ldap_host} -D ${zimbra_ldap_userdn} -w ${zimbra_ldap_password} -LLL zimbraId=$i zimbraMailHost zimbraMailDeliveryAddress > $TMP_FILE
+	
+	# check if a valid ldap response from LDAP was given
+	isValid=$(/usr/bin/grep "dn:" $TMP_FILE -c)
+	if [ $isValid -eq 0 ]; then
+		echo "Error: invalid response from ${ldap_host}" 1>&2
+		exit 1
+	fi
 	
 	# get account mail delivery address
 	mail=$(/usr/bin/cat $TMP_FILE | /usr/bin/grep -i zimbraMailDeliveryAddress | awk '{print $2}')
