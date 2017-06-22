@@ -5,7 +5,8 @@
 # using a target key name 
 #
 # Author: rsilveira1987@live.com
-# 
+# https://github.com/rsilveira1987
+#
 #################################################
 
 #################################################
@@ -71,7 +72,7 @@ do
 	shift
 done
 
-# check if arg1 is heap_maxsize (this key isnt in stats file)
+# check if arg1 is java_heap_size (this key isnt in stats file)
 if [ "$key" == "java_heap_size" ];then
 	echo ${mailboxd_java_heap_size} | awk {'print $1 * 1024 * 1024'}
         exit 0
