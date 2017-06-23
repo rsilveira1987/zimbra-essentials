@@ -77,12 +77,16 @@ do
 	# get ldap info for each zimbraId
 	/usr/bin/ldapsearch -x -h ${ldap_host} -D ${zimbra_ldap_userdn} -w ${zimbra_ldap_password} -LLL zimbraId=$i zimbraMailHost zimbraMailDeliveryAddress > $TMP_FILE
 	
-	# check if a valid ldap response from LDAP was given
-	isValid=$(/usr/bin/grep "dn:" $TMP_FILE -c)
-	if [ $isValid -eq 0 ]; then
-		echo "Error: invalid response from ${ldap_host}" 1>&2
-		exit 1
-	fi
+	# check if a valid ldap response was given
+        #
+        # TODO: inconsistent accounts handler
+        #
+        isValid=$(/usr/bin/grep "dn:" $TMP_FILE -c)
+        if [ $isValid -eq 0 ]; then
+                # echo "Error: invalid response from ${ldap_host}" 1>&2
+                # exit 1
+                continue
+        fi
 	
 	# get account mail delivery address
 	mail=$(/usr/bin/cat $TMP_FILE | /usr/bin/grep -i zimbraMailDeliveryAddress | awk '{print $2}')
