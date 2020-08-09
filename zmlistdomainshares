@@ -58,7 +58,7 @@ Argument: \n\
   DOMAIN    Zimbra domain name"
 
     parser = optparse.OptionParser(usage=usage,version="%prog 1.0")
-    parser.add_option("-d","--debug", action="store_true", dest="debug", default=True, help=("Enable debug mode [defalut: on]"))
+    parser.add_option("-d","--debug", action="store_true", dest="debug", default=False, help=("Enable debug mode [defalut: on]"))
 
     (options, args) = parser.parse_args()
 
@@ -99,6 +99,7 @@ def main():
         logging.debug('  Processando %s' % user)
 
 	if (isSystemAccount(acct)):
+	    logging.debug('  Skipping %s' % user)
 	    continue
 
         # obtem todos os compartilamentos da conta
