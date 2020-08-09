@@ -4,7 +4,7 @@
 
 This repository contains a lot of cool stuff to help you manage Zimbra Servers. Paste this scripts inside your **/opt/zimbra/bin/** directory to use their funcionality. All scripts work separately.
 
-### zmlistdomainshares
+#### zmlistdomainshares
 - List all shared folders from targer domain
 
 #### zmpurgelist
