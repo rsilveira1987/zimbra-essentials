@@ -1,0 +1,122 @@
+#!/opt/zimbra/bin/zmpython
+
+import logging
+import optparse
+import sys
+
+from com.zimbra.cs.account import Provisioning, SearchAccountsOptions
+
+#----------------------------------------------------------------------
+# Funcoes auxiliares
+#----------------------------------------------------------------------
+def isSystemAccount(acct):
+    # verifica se acct eh uma conta de sistema
+
+    if acct.isIsSystemAccount() or acct.isIsSystemResource() or acct.isIsExternalVirtualAccount():
+        return True
+
+    # verifica se a conta eh do tipo RESOURCE (salas/projetores)
+    if acct.getAttr('zimbraAccountCalendarUserType') == 'RESOURCE':
+        return True
+
+    return False
+
+#-----------------------------------------------------------------------------
+# LOGGER CONFIG
+#-----------------------------------------------------------------------------
+
+LOG_FILE = '/var/log/rotinas/zmgetdomainshares.log' # Alterar o arquivo de log aqui
+"""
+LOG LEVELS:
+logging.CRITICAL
+logging.ERROR
+logging.WARNING
+logging.INFO
+logging.DEBUG
+logging.NOTSET (logs all messages)
+"""
+
+# cria o objeto de logging
+logging.basicConfig(
+    level=logging.INFO,
+#    filename=LOG_FILE,
+    filemode='a',
+    format='%(asctime)s %(levelname)s %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+#------------------------------------------------------------------------------
+# CLI Options
+#------------------------------------------------------------------------------
+
+def parse_options():
+    '''Funcao para tratar a linha de comando'''
+    usage = "usage: %prog DOMAIN [options]\n\n\
+%prog shows all shares from target DOMAIN\n\n\
+See log messages at " + LOG_FILE + "\n\n\
+Argument: \n\
+  DOMAIN    Zimbra domain name"
+
+    parser = optparse.OptionParser(usage=usage,version="%prog 1.0")
+    parser.add_option("-d","--debug", action="store_true", dest="debug", default=True, help=("Enable debug mode [defalut: on]"))
+
+    (options, args) = parser.parse_args()
+
+    if not args:
+        parser.error("Invalid DOMAIN argument")
+        sys.exit(1)
+
+    return options, args
+
+#-----------------------------------------------------------------------------
+# Main Script
+#-----------------------------------------------------------------------------
+def main():
+    '''Funcao principal'''
+
+    # trata a linha de comando
+    options, args = parse_options()
+
+    # adiciona o args[0] no dicionario de opcoes para manter compatibilidade
+    options.domain = args[0]
+
+    # LOGGER ENABLE/DISABLE
+    if options.debug:
+        logger = logging.getLogger()
+        logger.setLevel(logging.DEBUG)
+
+    # obtem instancia zmprov
+    prov = Provisioning.getInstance()
+    domain = prov.getDomainByName(options.domain)
+
+    # acct = prov.getAccountByName(options.account)
+    allAccts = domain.getAllAccounts()
+
+    for acct in allAccts:
+
+        # separa prefixo e dominio do email para nao poluir o log
+        user, user_domain = acct.name.split('@',1)
+        logging.debug('  Processando %s' % user)
+
+	if (isSystemAccount(acct)):
+	    continue
+
+        # obtem todos os compartilamentos da conta
+        sharedItems = acct.getSharedItem()
+
+        # itera os compartilhamentos e gera uma lista de grantees
+        sharedFolders = []
+        granteeList = []
+        for sharedItem in sharedItems:
+            itemData = sharedItem.split(';')
+            info = {}
+            for data in itemData:
+                key , value = data.split(':')
+                info.update({key:value})
+            logging.info('   %s shares %s with %s' % (user,info.get('folderPath'),info.get('granteeName')) )
+            grantee = info.get('granteeName')
+            sharedFolders.append( (info.get('folderPath'),info) )
+
+# executa o script se for chamado no shell
+if __name__ == "__main__":
+    main()
