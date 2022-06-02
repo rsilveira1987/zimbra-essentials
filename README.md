@@ -9,6 +9,9 @@ This repository contains a lot of cool stuff to help you manage Zimbra Servers. 
 
 #### zmpurgelist
 - List all purgeable accounts in the current mailbox server.
+
+#### zmsignature
+- Sync a specic HTML signature for zimbra accounts ( needs API endpoint ).
   
 #### zmstat-mailboxd
 - Get server mailboxd stats info.
