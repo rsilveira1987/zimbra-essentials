@@ -2,6 +2,8 @@
 
 """
 Script para atualizar a assinatura das contas zimbra de um determinado dominio em um determinado mailbox
+Author: rsilveira1987@live.com
+https://github.com/rsilveira1987
 """
 
 import urllib2
